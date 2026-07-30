@@ -1,0 +1,12 @@
+# gen(stylua): initial formatting of entire codebase
+357e66cd8296b7612082aa94aa8845aeaa56898a
+
+# gen(bar_codemod): bracket-to-dot
+14a33696a792546ad88bd43746493cb9ba1e9f44
+
+# gen(bar_codemod): rename-aliases
+f9afe96bdb97607f8972feed08ef5571937049a9
+
+# gen(bar_codemod): detach-bar-modules
+a96389dced4678fafff3e4149c51e0c29fb6970f
+
