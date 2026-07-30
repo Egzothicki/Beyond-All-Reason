@@ -1,6 +1,7 @@
 local widget = widget ---@type Widget
 
 local customPresetOptions -- forward-decl: read in options export
+local customPresets -- forward-decl: read in config export
 
 function widget:GetInfo()
 	return {
@@ -1269,6 +1270,7 @@ local function checkQuitscreen()
 	if not canPauseGame then
 		return
 	end
+	local _, _, isClientPaused = Spring.GetGameState()
 	quitscreen = (WG.topbar and WG.topbar.showingQuit() or false)
 	if prevQuitscreen ~= quitscreen then
 		if quitscreen and isClientPaused and not showToggledOff then

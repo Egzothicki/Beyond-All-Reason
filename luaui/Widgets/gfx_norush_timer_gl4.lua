@@ -18,6 +18,7 @@ local spEcho = Spring.Echo
 -- spEcho(Spring.GetTeamInfo(Spring.GetMyTeamID()))
 
 local pveAllyTeamID = BAR.Utilities.GetScavAllyTeamID() or BAR.Utilities.GetRaptorAllyTeamID()
+local NUM_BOXES = 0
 
 ---- Config stuff ------------------
 local autoReload = false -- refresh shader code every second (disable in production!)

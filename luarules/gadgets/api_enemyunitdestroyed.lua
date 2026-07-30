@@ -20,6 +20,7 @@ if not gadgetHandler:IsSyncedCode() then
 	function gadget:Initialize()
 		myAllyTeamID = Spring.GetLocalAllyTeamID()
 		spec, fullView = Spring.GetSpectatingState()
+		fullview = fullView
 	end
 
 	function gadget:PlayerChanged(playerID)

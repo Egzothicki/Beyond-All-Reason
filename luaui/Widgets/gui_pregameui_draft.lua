@@ -1,6 +1,7 @@
 local widget = widget ---@type Widget
 
-local isAI = false -- forward-decl: read in DrawState
+---@type LuaFont
+local font
 
 function widget:GetInfo()
 	return {
@@ -31,7 +32,7 @@ local fontfileScale = (0.5 + (vsx * vsy / 6200000))
 local fontfileSize = 50
 local fontfileOutlineSize = 10
 local fontfileOutlineStrength = 1.4
-local font = gl.LoadFont(fontfile, fontfileSize * fontfileScale, fontfileOutlineSize * fontfileScale, fontfileOutlineStrength)
+font = gl.LoadFont(fontfile, fontfileSize * fontfileScale, fontfileOutlineSize * fontfileScale, fontfileOutlineStrength)
 
 local uiScale = (0.7 + (vsx * vsy / 6500000))
 local myPlayerID = Spring.GetLocalPlayerID()
@@ -213,6 +214,7 @@ local function DrawState(playerID, posX, posY)
 	-- note that adv pl list uses a phantom pID for absent players, so this will always show unready for players not ingame
 	local ready = (playerReadyState[playerID] == 1) or (playerReadyState[playerID] == 2) or (playerReadyState[playerID] == -1)
 	local hasStartPoint = (playerReadyState[playerID] == 4)
+	local _, _, ai = Spring.GetPlayerInfo(playerID, false)
 	if ai then
 		gl_Color(0.1, 0.1, 0.97, 1)
 	else
@@ -995,6 +997,7 @@ function widget:Initialize()
 	end
 
 	local xn, zn, xp, zp = Spring.GetAllyTeamStartBox(myAllyTeamID)
+	local msx, _, msz = Game.mapSizeX, Game.mapSizeY, Game.mapSizeZ
 	if xn and (xn ~= 0 or zn ~= 0 or xp ~= msx or zp ~= msz) then
 		hasStartbox = true
 	end
