@@ -35,6 +35,7 @@ return {
 			model_author = "Tharsis",
 			normaltex = "unittextures/cor_normal.dds",
 			paralyzemultiplier = 1,
+			reaimtime = 2,
 			subfolder = "CorBots/T2",
 			techlevel = 2,
 			unitgroup = "weapon",

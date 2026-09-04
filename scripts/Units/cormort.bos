@@ -4,10 +4,14 @@
 piece  support, flare, lthigh, rthigh, Torso, Shoulder, Barrel, rfoot,
        lfoot, Forearm, lleg, rleg, pelvis, aimx1, aimy1, head;
 
-static-var  isAiming, restore_delay, wpn1_lasthead;
+static-var  isAiming, restore_delay;
 
 // Signal definitions
 #define SIGNAL_AIM1 256
+
+#define COMPAIM1_YAW_SPEED <190.043956>
+#define COMPAIM1_RESTORE_SPEED <90.021978>
+#include "../compensated_turret_aim.h"
 
 // Generated for D:\spring\animation\cormort_anim_walk.blend
 // Using https://github.com/Beherith/Skeletor_S3O 
@@ -282,6 +286,7 @@ Create()
 	hide flare;
 	animSpeed = 4;
 	restore_delay = 2000;
+	start-script COMPAIM1_Controller();
 	return (0);
 }
 
@@ -299,15 +304,14 @@ ExecuteRestoreAfterDelay()
     if (Stunned) {
         return (1);
     }
-	turn aimy1 to y-axis <0.0> speed <90.021978>;
+	call-script COMPAIM1_StopAiming();
 	turn aimx1 to x-axis <0.0> speed <45.010989>;
-	wait-for-turn aimy1 around y-axis;
 	isAiming = FALSE;
-	wpn1_lasthead = 0xbadface;
 }
 SetStunned(State)
 {
     Stunned = State;
+    call-script COMPAIM1_SetStunned(State);
 	if (!Stunned) {
 	    start-script ExecuteRestoreAfterDelay();
 	}
@@ -323,17 +327,14 @@ AimWeapon1(heading, pitch)
 {
 	signal SIGNAL_AIM1;
 	isAiming = TRUE;
-	turn aimy1 to y-axis heading speed <190.043956>;
+	call-script COMPAIM1_Aim(heading);
 	turn aimx1 to x-axis <0.0> - pitch speed <150.032967>;
-
-	if ((wpn1_lasthead == 0xbadface) OR ABSOLUTE_GREATER_THAN(WRAPDELTA(heading - wpn1_lasthead), <7>))
-	{
-		wpn1_lasthead = 0xbadface;
-		wait-for-turn aimy1 around y-axis;
-		wait-for-turn aimx1 around x-axis;
-	}
 	start-script RestoreAfterDelay();
-	wpn1_lasthead = heading;
+
+	if (!COMPAIM1ready)
+	{
+		return (0);
+	}
 	return (1);
 }
 

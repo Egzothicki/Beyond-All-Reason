@@ -4,7 +4,7 @@
 piece  torso, ruparm, luparm, rfire, lfire, rloarm, lloarm, pelvis,
        rleg, rfoot, lleg, lfoot, lthigh, rthigh,lknee,rknee, aimy1, aimx1;
 
-static-var  isMoving, isAiming, gun_1, moveSpeed, currentSpeed, curHead1, curPitch1, weaponReady;
+static-var  isMoving, isAiming, gun_1, moveSpeed, currentSpeed, weaponReady;
 
 
 //#define DEBUG
@@ -14,6 +14,13 @@ static-var  isMoving, isAiming, gun_1, moveSpeed, currentSpeed, curHead1, curPit
 
 // Signal definitions
 #define SIGNAL_AIM1 256
+
+#define COMPAIM1_PIECE_X aimx1
+#define COMPAIM1_YAW_SPEED Weapon1TurretY
+#define COMPAIM1_PITCH_SPEED Weapon1TurretX
+#define COMPAIM1_FIRE_ANGLE (Weapon1TurretY / 15)
+#define COMPAIM1_FIRE_ANGLE_PITCH (Weapon1TurretX / 15)
+#include "../compensated_turret_aim.h"
 static-var animSpeed, maxSpeed, animFramesPerKeyframe;
 #define SIGNAL_MOVE 1
 Walk() {//Created by https://github.com/Beherith/Skeletor_S3O from N:\animations\corak_anim_walk_v2.blend 
@@ -970,9 +977,8 @@ Create()
 	currentSpeed = 100;
 	moveSpeed = get MAX_SPEED;
 	weaponReady = FALSE;
-	curPitch1 = 0;
-	curHead1 = 0;
 	animSpeed = 2;
+	start-script COMPAIM1_Controller();
 }
 
 StartMoving(reversing){
@@ -1001,38 +1007,13 @@ ExecuteRestoreAfterDelay()
     }
 
 	weaponReady = FALSE;
-
-	// walk believed angles back in sync with the pieces (instant reset desyncs mid-restore aim)
-	set-signal-mask SIGNAL_AIM1;
-	var done;
-	var delta;
-	while (!done){
-		done = TRUE;
-		delta = WRAPDELTA(0 - curHead1);
-		if (ABSOLUTE_GREATER_THAN(delta,(Weapon1TurretY / 30))) {
-			curHead1 = curHead1 + SIGN(delta) * (Weapon1TurretY / 30);
-			done = FALSE;
-		}else{
-			curHead1 = 0;
-		}
-		delta = WRAPDELTA(0 - curPitch1);
-		if (ABSOLUTE_GREATER_THAN(delta,(Weapon1TurretX / 30))) {
-			curPitch1 = curPitch1 + SIGN(delta) * (Weapon1TurretX / 30);
-			done = FALSE;
-		}else{
-			curPitch1 = 0;
-		}
-		turn aimy1 to y-axis curHead1 speed Weapon1TurretY;
-		turn aimx1 to x-axis <0> - curPitch1 speed Weapon1TurretX;
-		if (!done) {
-			sleep 1;
-		}
-	}
+	call-script COMPAIM1_StopAiming();
     isAiming = 0;
 }
 SetStunned(State)
 {
     Stunned = State;
+    call-script COMPAIM1_SetStunned(State);
 	if (!Stunned) {
 	    start-script ExecuteRestoreAfterDelay();
 	}
@@ -1059,45 +1040,13 @@ QueryWeapon1(pieceIndex)
 AimWeapon1(heading, pitch)
 {
 	signal SIGNAL_AIM1;
-	set-signal-mask SIGNAL_AIM1;
-
-	var canShoot;
-	var delta;
-	var nextHead;
-	var nextPitch;
-
-	while (!canShoot){
-		canShoot = TRUE;
-		delta = WRAPDELTA(heading - curHead1);
-		if (ABSOLUTE_GREATER_THAN(delta,(Weapon1TurretY / 30))) {
-			nextHead = WRAPDELTA(curHead1 + SIGN(delta) * (Weapon1TurretY / 30));
-			canShoot = FALSE;
-		}else{
-			nextHead = heading;
-		}
-		delta = WRAPDELTA(pitch - curPitch1);
-		if (ABSOLUTE_GREATER_THAN(delta,(Weapon1TurretX / 30))) {
-			nextPitch = WRAPDELTA(curPitch1 + SIGN(delta) * (Weapon1TurretX / 30));
-			canShoot = FALSE;
-		}else{
-			nextPitch = pitch;
-		}
-
-		turn aimy1 to y-axis nextHead speed Weapon1TurretY;
-		turn aimx1 to x-axis <0> - nextPitch speed Weapon1TurretX;
-
-		//get PRINT(get GAME_FRAME, curHead1, heading);
-
-		// turn > sleep > commit: a preempting re-aim kills the thread at its sleep,
-		// cancelling the uncommitted step, so belief cannot outrun the pieces
-		if (!canShoot) {
-			sleep 1;
-		}
-		curHead1 = nextHead;
-		curPitch1 = nextPitch;
-	}
-	
+	call-script COMPAIM1_Aim(heading, pitch);
 	start-script RestoreAfterDelay();
+
+	if (!COMPAIM1ready)
+	{
+		return (0);
+	}
 	return (1);
 }
 

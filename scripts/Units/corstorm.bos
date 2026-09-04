@@ -4,7 +4,7 @@
 piece  aimy1, rfirept, lfirept, pelvis, rfoot, lfoot, launcher, lthigh,
        rthigh, rleg, lleg, turret,rexhaust,lexhaust,lknee,rknee, aimx1;
 
-static-var  gun_1, notMoving, moveSpeed, currentSpeed, animSpeed, wpn1_lasthead;
+static-var  gun_1, notMoving, moveSpeed, currentSpeed, animSpeed;
 static-var  maxSpeed, animFramesPerKeyframe, isMoving;
 
 lua_UnitScriptDecal(lightIndex, xpos,zpos, heading) 
@@ -14,6 +14,9 @@ lua_UnitScriptDecal(lightIndex, xpos,zpos, heading)
 // Signal definitions
 #define SIGNAL_MOVE 1
 #define SIGNAL_AIM1 256
+
+#define COMPAIM1_YAW_SPEED <90.021978>
+#include "../compensated_turret_aim.h"
 
 
 walk() 	// Author Beherith mysterme@gmail.com. License: GNU GPL v2.
@@ -372,6 +375,7 @@ Create()
 	hide aimx1;
 	hide aimy1;
 	gun_1 = aimy1;
+	start-script COMPAIM1_Controller();
 	notMoving = TRUE;
 	currentSpeed = 100;
 	moveSpeed = get MAX_SPEED;
@@ -399,13 +403,13 @@ ExecuteRestoreAfterDelay()
     if (Stunned) {
         return (1);
     }
-	turn aimy1 to y-axis <0.0> speed <90.021978>;
+	call-script COMPAIM1_StopAiming();
 	turn aimx1 to x-axis <0.0> speed <45.010989>;
-	wpn1_lasthead = 0xbadface;
 }
 SetStunned(State)
 {
     Stunned = State;
+    call-script COMPAIM1_SetStunned(State);
 	if (!Stunned) {
 	    start-script ExecuteRestoreAfterDelay();
 	}
@@ -420,16 +424,14 @@ RestoreAfterDelay()
 AimWeapon1(heading, pitch)
 {
 	signal SIGNAL_AIM1;
-	turn aimy1 to y-axis heading speed <90.021978>;
+	call-script COMPAIM1_Aim(heading);
 	turn aimx1 to x-axis <0.0> - pitch speed <45.010989>;
-	if ((wpn1_lasthead == 0xbadface) OR ABSOLUTE_GREATER_THAN(WRAPDELTA(heading - wpn1_lasthead), <7>))
-	{
-		wpn1_lasthead = 0xbadface;
-		wait-for-turn aimy1 around y-axis;
-		wait-for-turn aimx1 around x-axis;
-	}
-	wpn1_lasthead = heading;
 	start-script RestoreAfterDelay();
+
+	if (!COMPAIM1ready)
+	{
+		return (0);
+	}
 	return (1);
 }
 
@@ -468,6 +470,7 @@ FireWeapon1()
 DeathAnim() {// For N:\animations\corstorm_anim_death.blend Created by https://github.com/Beherith/Skeletor_S3O V((0, 2, 8)) 
 	signal SIGNAL_MOVE;
 	signal SIGNAL_AIM1;
+	call-script COMPAIM1_StopAiming();
 	call-script StopWalking();
 	turn aimy1 to y-axis <0> speed <180>;
 	turn aimx1 to x-axis <0> speed <180>;

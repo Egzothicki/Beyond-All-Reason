@@ -4,10 +4,14 @@
 piece  pelvis, lflare, rflare, lvent,rvent, lthigh, rthigh,
        torso, rleg, rfoot, lleg, lfoot,rarm, larm, rbarrel, lbarrel, aimy1, aimx1;
 
-static-var  isMoving, canAim, gun_1, gun_2, restore_delay, moveSpeed, currentSpeed, restore, wpn1_lasthead;
+static-var  isMoving, canAim, gun_1, gun_2, restore_delay, moveSpeed, currentSpeed, restore;
 
 // Signal definitions
 #define SIGNAL_AIM1 256
+
+#define COMPAIM1_YAW_SPEED <140>
+#define COMPAIM1_RESTORE_SPEED <90.0>
+#include "../compensated_turret_aim.h"
 
 #define BASEPIECE pelvis
 #define HITSPEED <55.0>
@@ -309,6 +313,7 @@ Create()
 	moveSpeed = get MAX_SPEED;
 	currentSpeed = 100;
 	animSpeed = 4;
+	start-script COMPAIM1_Controller();
 }
 
 SetMaxReloadTime(reloadMS)
@@ -324,9 +329,8 @@ ExecuteRestoreAfterDelay()
         return (1);
     }
     set-signal-mask 0;
-    turn aimy1 to y-axis <0.0> speed <90.0>;
+    call-script COMPAIM1_StopAiming();
     turn aimx1 to x-axis <0.0> speed <45.0>;
-    wpn1_lasthead = 0xbadface;
     if( canAim )
 	{
 		canAim = 0;
@@ -342,6 +346,7 @@ ExecuteRestoreAfterDelay()
 SetStunned(State)
 {
     Stunned = State;
+    call-script COMPAIM1_SetStunned(State);
 	if (!Stunned) {
 	    start-script ExecuteRestoreAfterDelay();
 	}
@@ -375,20 +380,13 @@ AimWeapon1(heading, pitch)
 		canAim = 1;
 	}
         signal SIGNAL_AIM1;
-        turn aimy1 to y-axis heading speed <140>;
+        call-script COMPAIM1_Aim(heading);
         turn aimx1 to x-axis <0.0> - pitch speed <50>;
-        while( !canAim )
-        {
-            return(0);
-        }
-		if ((wpn1_lasthead == 0xbadface) OR ABSOLUTE_GREATER_THAN(WRAPDELTA(heading - wpn1_lasthead), <12>))
-		{
-			wpn1_lasthead = 0xbadface;
-	        wait-for-turn aimy1 around y-axis;
-	        wait-for-turn aimx1 around x-axis;
-		}
 		start-script RestoreAfterDelay();
-		wpn1_lasthead = heading;
+		if (!COMPAIM1ready)
+		{
+			return (0);
+		}
     	return (1);
 }
 
@@ -426,6 +424,7 @@ FireWeapon1()
 DeathAnim() {// For C:\Users\ptasz\Documents\GitHub\support\Animation_sources\death_anims\armham_anim_death.blend Created by https://github.com/Beherith/Skeletor_S3O V((0, 3, 9)) 
 	signal SIGNAL_MOVE;
 	signal SIGNAL_AIM1;
+	call-script COMPAIM1_StopAiming();
 	call-script StopWalking();
 	turn aimy1 to y-axis <0> speed <120>;
 	turn aimx1 to x-axis <0> speed <120>;

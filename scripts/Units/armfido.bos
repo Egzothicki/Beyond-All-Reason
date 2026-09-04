@@ -6,10 +6,13 @@ piece  barrel, turret, loturret, flare, sleeve, torso, pelvis, lthigh, lleg, lfo
 
 static-var  restore_delay, weaponState, moveSpeed, currentSpeed, animSpeed, maxSpeed, animFramesPerKeyframe, isMoving;
 
-static-var last_primary_heading,last_primary_pitch;
 
 // Signal definitions
 #define SIGNAL_AIM1 256
+
+#define COMPAIM1_YAW_SPEED <150.000000>
+#define COMPAIM1_RESTORE_SPEED <90.0>
+#include "../compensated_turret_aim.h"
 #define SIGNAL_AIM2 512
 #define SIGNAL_MOVE 1
 
@@ -301,9 +304,6 @@ Activate()
 	signal SIGNAL_AIM1;
 	// variable setting weapon state
 	weaponState = 1;
-	// set last heading values to large negative, ensure first aim waits for the turn
-	last_primary_heading = -1000000;
-	last_primary_pitch = -1000000;
 }
 
 Deactivate()
@@ -312,9 +312,6 @@ Deactivate()
 	signal SIGNAL_AIM1;
 	// variable setting weapon state
 	weaponState = 0;
-	// set last heading values to large negative, ensure first aim waits for the turn
-	last_primary_heading = -1000000;
-	last_primary_pitch = -1000000;
 }
 
 static-var  Stunned;
@@ -324,13 +321,9 @@ ExecuteRestoreAfterDelay()
         return (1);
     }
 	// allow this to be signal killed by a AimWeapon call
-	set-signal-mask SIGNAL_AIM1; 
-	turn aimy1 to y-axis <0.0> speed <90.0>;
+	set-signal-mask SIGNAL_AIM1;
+	call-script COMPAIM1_StopAiming();
 	turn aimx1 to x-axis <0.0> speed <50.0>;
-	// set last heading values to large negative, ensure first aim waits for the turn
-	last_primary_heading = -1000000;
-	last_primary_pitch = -1000000;
-	
 }
 
 // For C:\Users\ptasz\Documents\GitHub\support\Animation_sources\idle_anims\armfido_anim_idle.blend Created by https://github.com/Beherith/Skeletor_S3O V((0, 3, 9))
@@ -1432,9 +1425,7 @@ Create()
 	animspeed = 4;
 	weaponState = 1;
 	moveSpeed = get MAX_SPEED;
-	// set last heading values to large negative, ensure first aim waits for the turn
-	last_primary_heading = -1000000;
-	last_primary_pitch = -1000000;
+	start-script COMPAIM1_Controller();
 }
 
 SetWeaponType(State)
@@ -1445,6 +1436,7 @@ SetWeaponType(State)
 SetStunned(State)
 {
     Stunned = State;
+    call-script COMPAIM1_SetStunned(State);
 	if (!Stunned) {
 	    start-script ExecuteRestoreAfterDelay();
 	}
@@ -1465,18 +1457,14 @@ SetMaxReloadTime(reloadMS)
 AimWeapon1(heading, pitch)
 {
 	signal SIGNAL_AIM1;
-	set-signal-mask SIGNAL_AIM1;
-	turn aimy1 to y-axis heading speed <150.000000>;
+	call-script COMPAIM1_Aim(heading);
 	turn aimx1 to x-axis <0.000000> - pitch speed <50.000000>;
-	if ( (get ABS(last_primary_heading - heading)>900) OR (get ABS(last_primary_pitch - pitch)>300) )
-	{
-		// seems to take 3 frames for wait-for-turn to process
-        wait-for-turn aimy1 around y-axis;
-        wait-for-turn aimx1 around x-axis;
-	}
 	start-script RestoreAfterDelay();
-	last_primary_heading = heading;
-	last_primary_pitch = pitch;
+
+	if (!COMPAIM1ready)
+	{
+		return (0);
+	}
 	return (1);
 }
 
@@ -1504,6 +1492,7 @@ QueryWeapon1(pieceIndex)
 DeathAnim() {// For C:\Users\ptasz\Documents\GitHub\support\Animation_sources\death_anims\armfido_anim_death.blend Created by https://github.com/Beherith/Skeletor_S3O V((0, 3, 9)) 
 	signal SIGNAL_MOVE;
 	signal SIGNAL_AIM1;
+	call-script COMPAIM1_StopAiming();
 	call-script StopWalking();
 	turn aimy1 to y-axis <0> speed <120>;
 	turn aimx1 to x-axis <0> speed <120>;

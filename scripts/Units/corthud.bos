@@ -4,7 +4,7 @@
 piece  torso, lbarrel, lfoot, lleg, lsleeve, lthigh, pack, pelvis, rbarrel, rfoot, rleg, rsleeve, rthigh,
        lfirept, rfirept, aimx1, aimy1;
 
-static-var  isMoving, isAiming, gun_1, wpnheading, animSpeed, maxSpeed, animFramesPerKeyframe, StompXZ, StompHeading;
+static-var  isMoving, isAiming, gun_1, animSpeed, maxSpeed, animFramesPerKeyframe, StompXZ, StompHeading;
 
 lua_UnitScriptDecal(lightIndex, xpos,zpos, heading)
 {
@@ -14,6 +14,10 @@ lua_UnitScriptDecal(lightIndex, xpos,zpos, heading)
 // Signal definitions
 #define SIGNAL_AIM1 256
 #define SIGNAL_MOVE 1
+
+#define COMPAIM1_YAW_SPEED <140>
+#define COMPAIM1_RESTORE_SPEED <90>
+#include "../compensated_turret_aim.h"
 Walk() {// For D:\images\bar\final-corthud-anim-chonky-fixed-baked2.blend Created by https://github.com/Beherith/Skeletor_S3O V((0, 4, 2))
 	set-signal-mask SIGNAL_MOVE;
 	if (isMoving) { //Frame:2
@@ -415,10 +419,10 @@ Create()
 	hide lfirept;
 	isMoving = FALSE;
 	isAiming = 0;
-	wpnheading = 0;
 	animSpeed = 2;
 	gun_1 = 0;
 	start-script UnitSpeed();
+	start-script COMPAIM1_Controller();
 }
 
 StartMoving(reversing)
@@ -455,14 +459,14 @@ ExecuteRestoreAfterDelay()
     if (Stunned) {
         return (1);
     }
-    turn aimy1 to y-axis <0.0> speed <90>;
+    call-script COMPAIM1_StopAiming();
     turn aimx1 to x-axis <0.0> speed <45>;
-    wpnheading = 0xbadface;
 
 }
 SetStunned(State)
 {
     Stunned = State;
+    call-script COMPAIM1_SetStunned(State);
 	if (!Stunned) {
 	    start-script ExecuteRestoreAfterDelay();
 	}
@@ -479,18 +483,14 @@ RestoreAfterDelay()
 AimWeapon1(heading, pitch)
 {
 	signal SIGNAL_AIM1;
-
-	turn aimy1 to y-axis heading speed <140>;
+	call-script COMPAIM1_Aim(heading);
 	turn aimx1 to x-axis <0.0> - pitch speed <50>;
-
-	//needed for luarules\gadgets\unit_continuous_aim.lua
-	if (wpnheading == 0xbadface OR ANGLE_DIFFERENCE_GREATER_THAN(wpnheading-heading, <5>)){
-		wpnheading = 0xbadface;
-		wait-for-turn aimy1 around y-axis;
-		wait-for-turn aimx1 around x-axis;
-	}
-	wpnheading = heading;
 	start-script RestoreAfterDelay();
+
+	if (!COMPAIM1ready)
+	{
+		return (0);
+	}
 	return (1);
 }
 
@@ -526,6 +526,7 @@ EndBurst1()
 DeathAnim() {// For N:\animations\corthud_anim_death.blend Created by https://github.com/Beherith/Skeletor_S3O V((0, 2, 8))
 	signal SIGNAL_MOVE;
 	signal SIGNAL_AIM1;
+	call-script COMPAIM1_StopAiming();
 	call-script StopWalking();
 	turn aimy1 to y-axis <0> speed <200>;
 	turn aimx1 to x-axis <0> speed <200>;

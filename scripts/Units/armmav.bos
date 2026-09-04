@@ -5,11 +5,15 @@ piece  rflare, lflare, body, pelvis, rthigh, lthigh, rleg, head,
        luparm, ruparm, lloarm, rloarm, lleg, lhipgun, rhipgun, lholster, rhandgun, lhandgun,
        rholster, rfoot, lfoot, aimy1, aimx1;
 
-static-var  ReadyToAim, gun_1, isMoving, isAiming, restore_delay, wpn1_lasthead, animSpeed, maxSpeed, 
+static-var  ReadyToAim, gun_1, isMoving, isAiming, restore_delay, animSpeed, maxSpeed,
 			animFramesPerKeyframe;
 
 // Signal definitions
 #define SIGNAL_AIM1 256
+
+#define COMPAIM1_YAW_SPEED <250.027473>
+#define COMPAIM1_RESTORE_SPEED <200.038462>
+#include "../compensated_turret_aim.h"
 #define SIGNAL_MOVE 1
 
 #include "../opencloseanim.h"
@@ -746,6 +750,7 @@ Create()
 	isAiming = FALSE;
 	gun_1 = rflare;
 	ReadyToAim = 0;
+	start-script COMPAIM1_Controller();
 	animspeed = 4;
 	hide lhandgun;
 	hide rhandgun;
@@ -767,13 +772,13 @@ ExecuteRestoreAfterDelay()
     }
 	set-signal-mask 0;
 	start-script OpenCloseAnim(0);
-	turn aimy1 to y-axis <0.0> speed <200.038462>;
+	call-script COMPAIM1_StopAiming();
 	isAiming = FALSE;
-	wpn1_lasthead = 0xbadface;
 }
 SetStunned(State)
 {
     Stunned = State;
+    call-script COMPAIM1_SetStunned(State);
 	if (!Stunned) {
 	    start-script ExecuteRestoreAfterDelay();
 	}
@@ -790,21 +795,18 @@ AimWeapon1(heading, pitch)
 	signal SIGNAL_AIM1;
 	start-script OpenCloseAnim(1);
 	isAiming = TRUE;
-	turn aimy1 to y-axis heading speed <250.027473>;
+	call-script COMPAIM1_Aim(heading);
 	turn aimx1 to x-axis -1*pitch speed <150>;
-	
-	while( !ReadyToAim )
-	{
-		return(0);
-	}
-	if ((wpn1_lasthead == 0xbadface) OR ABSOLUTE_GREATER_THAN(WRAPDELTA(heading - wpn1_lasthead), <7>))
-	{
-		wpn1_lasthead = 0xbadface;
-		wait-for-turn aimy1 around y-axis;
-		wait-for-turn aimx1 around x-axis;
-	}
 	start-script RestoreAfterDelay();
-	wpn1_lasthead = heading;
+
+	if ( !ReadyToAim )
+	{
+		return (0);
+	}
+	if (!COMPAIM1ready)
+	{
+		return (0);
+	}
 	return (1);
 }
 
