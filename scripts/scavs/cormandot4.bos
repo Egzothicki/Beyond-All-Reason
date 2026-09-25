@@ -347,16 +347,6 @@ StopMoving(){
 #define MAXTILT 100
 #include "../unit_hitbyweaponid_and_smoke.h"
 
-CloakChecker()
-{
-	while (TRUE){
-		if (turretdeployed > 0){
-			set WANT_CLOAK to 0;
-		}
-		sleep 1000;
-	}
-}
-
 Create()
 {
 	hide rnano;
@@ -371,7 +361,6 @@ Create()
 	//start-script Lights();
 	turretdeployed = 0;
 	isAimingArm = 0;
-	start-script CloakChecker();
 }
 
 StartBuilding(torsoing, pitch)
